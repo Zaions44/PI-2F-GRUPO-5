@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <!-- ... -->
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/entregador.css">
+</head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastTrack - Entregador</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f5f7fa; }
+        
+        header {
+            background: #1a1a2e;
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { color: white; font-size: 1.5rem; font-weight: 800; }
+        .logo span { color: #4fc3f7; }
+        .header-actions a { color: rgba(255,255,255,0.8); text-decoration: none; margin-left: 20px; }
+        .header-actions a:hover { color: white; }
+        
+        .container { max-width: 800px; margin: 40px auto; padding: 0 5%; }
+        
+        .pedido-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .pedido-card .btn-aceitar {
+            background: #4fc3f7;
+            color: #1a1a2e;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .pedido-card .btn-aceitar:hover { background: #38bdf8; }
+        
+        .empty-state { text-align: center; padding: 60px 0; color: #6b7280; }
+        .empty-state i { font-size: 4rem; margin-bottom: 20px; display: block; }
+        
+        .badge { 
+            display: inline-block; 
+            padding: 3px 12px; 
+            border-radius: 20px; 
+            font-size: 0.75rem; 
+            font-weight: 600;
+            background: #d1fae5;
+            color: #065f46;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Fast<span>Track</span></div>
+        <div class="header-actions">
+            <span style="color:#4fc3f7;">🚴 Entregador</span>
+            <a href="#" onclick="logout()" style="color:#ef4444;"><i class="fa-solid fa-sign-out-alt"></i></a>
+        </div>
+    </header>
+
+    <div class="container">
+        <h2 style="margin-bottom: 30px;">📦 Pedidos Disponíveis</h2>
+        <div id="pedidos-container">
+            <div class="empty-state"><i class="fa-regular fa-clock"></i>Carregando pedidos...</div>
+        </div>
+    </div>
+
+    <script>
+        const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+        if (!usuario || usuario.tipo !== 'entregador') {
+            window.location.href = '/login';
+        }
+
+        const token = localStorage.getItem('token');
+
+        async function carregarPedidos() {
+            try {
+                const response = await fetch('/api/pedidos/entregador/disponiveis');
+                const data = await response.json();
+                
+                const container = document.getElementById('pedidos-container');
+                if (!data.success || data.pedidos.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><i class="fa-regular fa-clock"></i>Nenhum pedido disponível</div>`;
+                    return;
+                }
+                
+                container.innerHTML = data.pedidos.map(p => `
+                    <div class="pedido-card">
+                        <div><strong>${p.empresa_nome}</strong></div>
+                        <div style="color:#6b7280;">Código: ${p.codigo_rastreamento}</div>
+                        <div style="color:#6b7280;">Total: R$ ${parseFloat(p.total).toFixed(2)}</div>
+                        <div style="color:#6b7280;">Endereço: ${p.endereco_entrega}</div>
+                        <span class="badge">✅ Pronto para retirada</span>
+                        <button class="btn-aceitar" onclick="aceitarPedido(${p.id})">Aceitar Entrega</button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro:', error);
+            }
+        }
+
+        async function aceitarPedido(pedidoId) {
+            try {
+                const response = await fetch(`/api/pedidos/${pedidoId}/entregador`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Pedido aceito! Atualize o status no app da empresa.');
+                    carregarPedidos();
+                    
+                    // Simular localização
+                    simularLocalizacao(pedidoId);
+                }
+            } catch (error) {
+                alert('Erro ao aceitar pedido');
+            }
+        }
+
+        function simularLocalizacao(pedidoId) {
+            // Simulação de localização em tempo real
+            let lat = -23.5505;
+            let lng = -46.6333;
+            
+            const interval = setInterval(() => {
+                lat += (Math.random() - 0.5) * 0.001;
+                lng += (Math.random() - 0.5) * 0.001;
+                
+                fetch('/api/entregador/localizacao', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        pedido_id: pedidoId,
+                        latitude: lat,
+                        longitude: lng
+                    })
+                });
+                
+                console.log(`📍 Localização enviada: ${lat}, ${lng}`);
+            }, 5000);
+            
+            // Parar após 2 minutos
+            setTimeout(() => clearInterval(interval), 120000);
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('usuario');
+            window.location.href = '/login';
+        }
+
+        carregarPedidos();
+    </script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastTrack - Meus Pedidos</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f5f7fa; }
+        
+        header {
+            background: #1a1a2e;
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { color: white; font-size: 1.5rem; font-weight: 800; }
+        .logo span { color: #4fc3f7; }
+        .header-actions a { color: rgba(255,255,255,0.8); text-decoration: none; margin-left: 20px; }
+        .header-actions a:hover { color: white; }
+        
+        .container { max-width: 800px; margin: 40px auto; padding: 0 5%; }
+        
+        .pedido-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-left: 5px solid #4fc3f7;
+        }
+        .pedido-card .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .status-recebido { background: #fef3c7; color: #92400e; }
+        .status-preparando { background: #dbeafe; color: #1e40af; }
+        .status-pronto { background: #d1fae5; color: #065f46; }
+        .status-saiu_entrega { background: #fce4ec; color: #9a3412; }
+        .status-entregue { background: #d1fae5; color: #065f46; }
+        
+        .pedido-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .pedido-header .codigo { color: #6b7280; font-size: 0.8rem; }
+        .pedido-body { color: #374151; }
+        .pedido-footer {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .empty-state { text-align: center; padding: 60px 0; color: #6b7280; }
+        .empty-state i { font-size: 4rem; margin-bottom: 20px; display: block; }
+        
+        .timer { color: #ef4444; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Fast<span>Track</span></div>
+        <div class="header-actions">
+            <a href="/">🏠 Home</a>
+            <a href="#" onclick="logout()" style="color:#ef4444;"><i class="fa-solid fa-sign-out-alt"></i></a>
+        </div>
+    </header>
+
+    <div class="container">
+        <h2 style="margin-bottom: 30px;">📋 Meus Pedidos</h2>
+        <div id="pedidos-container">
+            <div class="empty-state"><i class="fa-regular fa-clock"></i>Carregando pedidos...</div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+
+        // Verificar autenticação
+        const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+        if (!usuario) {
+            window.location.href = '/login';
+        }
+
+        const token = localStorage.getItem('token');
+
+        // Entrar na sala do cliente para receber atualizações
+        socket.emit('entrar_sala', `cliente_${usuario.id}`);
+
+        // Ouvir atualizações de status
+        socket.on('status_atualizado', (data) => {
+            console.log('Status atualizado:', data);
+            carregarPedidos();
+        });
+
+        // Ouvir localização do entregador
+        socket.on('localizacao_atualizada', (data) => {
+            console.log('📍 Entregador:', data);
+            // Atualizar mapa (simplificado)
+            const pedidoElement = document.querySelector(`[data-pedido="${data.pedido_id}"]`);
+            if (pedidoElement) {
+                const statusText = pedidoElement.querySelector('.status-text');
+                if (statusText) {
+                    statusText.innerHTML = `📍 Entregador está a caminho!`;
+                }
+            }
+        });
+
+        async function carregarPedidos() {
+            try {
+                const response = await fetch('/api/pedidos/cliente', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                
+                const container = document.getElementById('pedidos-container');
+                if (!data.success || data.pedidos.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><i class="fa-regular fa-clock"></i>Você ainda não fez nenhum pedido</div>`;
+                    return;
+                }
+                
+                container.innerHTML = data.pedidos.map(p => {
+                    const statusClass = `status-${p.status.replace('_', '')}`;
+                    const statusLabels = {
+                        'recebido': '📥 Recebido',
+                        'preparando': '👨‍🍳 Preparando',
+                        'embalando': '📦 Embalando',
+                        'pronto': '✅ Pronto',
+                        'saiu_entrega': '🚴 Saiu para entrega',
+                        'entregue': '🎉 Entregue'
+                    };
+                    
+                    return `
+                        <div class="pedido-card" data-pedido="${p.id}">
+                            <div class="pedido-header">
+                                <div>
+                                    <strong>${p.empresa_nome || 'Restaurante'}</strong>
+                                    <span class="codigo">Código: ${p.codigo_rastreamento}</span>
+                                </div>
+                                <span class="status ${statusClass}">${statusLabels[p.status] || p.status}</span>
+                            </div>
+                            <div class="pedido-body">
+                                <div><strong>Total:</strong> R$ ${parseFloat(p.total).toFixed(2)}</div>
+                                <div><strong>Data:</strong> ${new Date(p.data_pedido).toLocaleString()}</div>
+                                <div class="status-text" style="margin-top:10px;color:#4fc3f7;font-weight:500;">
+                                    ${p.status === 'saiu_entrega' ? '🚴 Seu pedido está a caminho!' : ''}
+                                </div>
+                            </div>
+                            <div class="pedido-footer">
+                                <span>${p.endereco_entrega}</span>
+                                ${p.status !== 'entregue' ? `<span class="timer">⏱️ Atualizando...</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Erro:', error);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('usuario');
+            window.location.href = '/login';
+        }
+
+        carregarPedidos();
+    </script>
+</body>
+</html>

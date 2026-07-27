@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <!-- ... -->
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/cliente.css">
+</head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastTrack - Home</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f5f7fa; }
+        
+        header {
+            background: #1a1a2e;
+            padding: 15px 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo { color: white; font-size: 1.5rem; font-weight: 800; }
+        .logo span { color: #4fc3f7; }
+        .header-actions { display: flex; gap: 20px; align-items: center; }
+        .header-actions a { color: rgba(255,255,255,0.8); text-decoration: none; transition: 0.3s; }
+        .header-actions a:hover { color: white; }
+        .cart-btn { position: relative; cursor: pointer; color: white; font-size: 1.2rem; }
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -10px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 50%;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 5%; }
+        
+        .hero {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, #1a1a2e, #0f3460);
+            border-radius: 30px;
+            color: white;
+            margin-bottom: 40px;
+        }
+        .hero h1 { font-size: 3rem; margin-bottom: 15px; }
+        .hero h1 span { color: #4fc3f7; }
+        .hero p { color: rgba(255,255,255,0.7); max-width: 600px; margin: 0 auto; }
+        
+        .search-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+        .search-bar input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            font-size: 1rem;
+            outline: none;
+        }
+        .search-bar input:focus { border-color: #4fc3f7; }
+        
+        .restaurantes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        .restaurante-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .restaurante-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .restaurante-card h3 { margin-bottom: 5px; }
+        .restaurante-card p { color: #6b7280; font-size: 0.9rem; }
+        .restaurante-card .categoria {
+            display: inline-block;
+            background: #e5e7eb;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            margin-top: 10px;
+        }
+        
+        .cart-drawer {
+            position: fixed;
+            top: 0;
+            right: -450px;
+            width: 450px;
+            height: 100%;
+            background: white;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+            z-index: 1000;
+            padding: 30px;
+            transition: 0.3s;
+            overflow-y: auto;
+        }
+        .cart-drawer.active { right: 0; }
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .cart-total {
+            padding: 20px 0;
+            border-top: 2px solid #1a1a2e;
+            margin-top: 20px;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        .overlay.active { display: block; }
+        
+        .btn-primary {
+            background: #4fc3f7;
+            color: #1a1a2e;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(79,195,247,0.3); }
+        .btn-secondary {
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-secondary:hover { background: #0f3460; }
+        
+        .empty-state { text-align: center; padding: 60px 0; color: #6b7280; }
+        .empty-state i { font-size: 4rem; margin-bottom: 20px; display: block; }
+        
+        @media (max-width: 768px) {
+            .cart-drawer { width: 100%; right: -100%; }
+            .hero h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">Fast<span>Track</span></div>
+        <div class="header-actions">
+            <a href="/cliente/pedidos"><i class="fa-regular fa-clock"></i> Pedidos</a>
+            <span class="cart-btn" onclick="toggleCart()">
+                <i class="fa-solid fa-cart-shopping"></i>
+                <span class="cart-count" id="cart-count">0</span>
+            </span>
+            <a href="#" id="user-name" style="color:#4fc3f7;">Perfil</a>
+            <a href="#" onclick="logout()" style="color:#ef4444;"><i class="fa-solid fa-sign-out-alt"></i></a>
+        </div>
+    </header>
+
+    <div class="overlay" id="overlay" onclick="toggleCart()"></div>
+    <div class="cart-drawer" id="cart-drawer">
+        <div class="cart-header">
+            <h3>🛒 Seu Carrinho</h3>
+            <span onclick="toggleCart()" style="font-size:1.5rem;cursor:pointer;">✕</span>
+        </div>
+        <div id="cart-items"><div class="empty-state"><i class="fa-regular fa-cart-empty"></i>Seu carrinho está vazio</div></div>
+        <div class="cart-total" id="cart-total">Total: R$ 0,00</div>
+        <button class="btn-primary" style="width:100%;padding:15px;" onclick="finalizarPedido()">Finalizar Pedido</button>
+    </div>
+
+    <div class="container">
+        <div class="hero">
+            <h1>🍔 Peça seu <span>Fast Food</span></h1>
+            <p>Os melhores restaurantes da sua região em um só lugar. Acompanhe seu pedido em tempo real!</p>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" id="search-input" placeholder="Buscar restaurante..." onkeyup="filtrarRestaurantes()">
+        </div>
+
+        <div id="restaurantes-container" class="restaurantes-grid">
+            <!-- Carregado via JavaScript -->
+        </div>
+    </div>
+
+    <script src="/js/cliente.js"></script>
+</body>
+</html>
