@@ -23,7 +23,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fasttrack_secret_2024';
 function autenticar(req, res, next) {
     const token = req.headers['authorization']?.split(' ')[1];
     if (!token) return res.status(401).json({ success: false, message: "Token não fornecido" });
-    
+
     jwt.verify(token, JWT_SECRET, (err, usuario) => {
         if (err) return res.status(403).json({ success: false, message: "Token inválido" });
         req.usuario = usuario;
@@ -32,64 +32,56 @@ function autenticar(req, res, next) {
 }
 
 // ========== ROTAS DE AUTENTICAÇÃO ==========
-// ========== ROTA DE LOGIN (ACEITA HASH E TEXTO PURO) ==========
-app.post('/api/auth/login', async (req, res) => {
-    const { email, senha } = req.body;
-    console.log('📝 Tentativa de login:', email);
-    
+
+// ========== ROTAS DE AUTENTICAÇÃO ==========
+app.post('/api/auth/cadastro', async (req, res) => {
+    const { nome, email, senha, telefone, tipo } = req.body;
     try {
-        const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-        
-        if (result.rows.length === 0) {
-            console.log('❌ Usuário não encontrado:', email);
-            return res.status(401).json({ success: false, message: "Email ou senha incorretos" });
+        const existe = await pool.query('SELECT id FROM usuarios WHERE email = $1', [email]);
+        if (existe.rows.length > 0) {
+            return res.status(400).json({ success: false, message: "Email já cadastrado" });
         }
-        
+
+        const senhaHash = await bcrypt.hash(senha, 10);
+        const result = await pool.query(
+            'INSERT INTO usuarios (nome, email, senha, telefone, tipo) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, email, tipo',
+            [nome, email, senhaHash, telefone, tipo || 'cliente']
+        );
+
         const usuario = result.rows[0];
-        console.log('👤 Usuário encontrado:', usuario.nome);
-        console.log('🔑 Senha no banco:', usuario.senha);
-        console.log('🔑 Senha digitada:', senha);
-        
-        let senhaValida = false;
-        
-        // ⚠️ VERIFICA SE A SENHA É HASH OU TEXTO PURO
-        if (usuario.senha && usuario.senha.startsWith('$2b$')) {
-            // É um hash do bcrypt
-            console.log('🔐 Senha é hash, usando bcrypt...');
-            senhaValida = await bcrypt.compare(senha, usuario.senha);
-        } else {
-            // É texto puro
-            console.log('📝 Senha é texto puro, comparando diretamente...');
-            senhaValida = (senha === usuario.senha);
-        }
-        
-        console.log('✅ Senha válida?', senhaValida);
-        
-        if (senhaValida) {
-            await pool.query('UPDATE usuarios SET ultimo_login = NOW() WHERE id = $1', [usuario.id]);
-            
-            const token = jwt.sign(
-                { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo },
-                JWT_SECRET,
-                { expiresIn: '7d' }
-            );
-            
-            console.log('✅ Login sucesso:', usuario.nome);
-            res.json({ 
-                success: true, 
-                token,
-                usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo }
-            });
-        } else {
-            console.log('❌ Senha incorreta para:', email);
-            res.status(401).json({ success: false, message: "Email ou senha incorretos" });
-        }
-        
+        const token = jwt.sign({ id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo }, JWT_SECRET, { expiresIn: '7d' });
+
+        res.json({ success: true, token, usuario });
     } catch (error) {
-        console.error('❌ Erro no login:', error);
-        res.status(500).json({ success: false, message: "Erro interno do servidor" });
+        console.error(error);
+        res.status(500).json({ success: false, message: "Erro interno" });
     }
 });
+
+app.post('/api/auth/login', async (req, res) => {
+    const { email, senha } = req.body;
+    try {
+        const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+        if (result.rows.length === 0) {
+            return res.status(401).json({ success: false, message: "Email ou senha incorretos" });
+        }
+
+        const usuario = result.rows[0];
+        const senhaValida = await bcrypt.compare(senha, usuario.senha);
+        if (!senhaValida) {
+            return res.status(401).json({ success: false, message: "Email ou senha incorretos" });
+        }
+
+        await pool.query('UPDATE usuarios SET ultimo_login = NOW() WHERE id = $1', [usuario.id]);
+        const token = jwt.sign({ id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo, is_dev: usuario.is_dev }, JWT_SECRET, { expiresIn: '7d' });
+
+        res.json({ success: true, token, usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo, is_dev: usuario.is_dev } });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Erro interno" });
+    }
+});
+
 // ========== ROTAS DE EMPRESAS ==========
 app.get('/api/empresas', async (req, res) => {
     try {
@@ -103,9 +95,9 @@ app.get('/api/empresas', async (req, res) => {
 // ========== ROTA DE PRODUTOS (SEM IMAGEM) ==========
 app.post('/api/produtos', autenticar, async (req, res) => {
     console.log('📦 Recebendo produto:', req.body);
-    
+
     const { empresa_id, nome, descricao, preco, estoque } = req.body;
-    
+
     if (!empresa_id) {
         return res.status(400).json({ success: false, message: 'empresa_id é obrigatório' });
     }
@@ -115,7 +107,7 @@ app.post('/api/produtos', autenticar, async (req, res) => {
     if (!preco || isNaN(preco) || preco <= 0) {
         return res.status(400).json({ success: false, message: 'preco deve ser maior que zero' });
     }
-    
+
     try {
         const result = await pool.query(
             `INSERT INTO produtos (empresa_id, nome, descricao, preco, estoque) 
@@ -123,15 +115,15 @@ app.post('/api/produtos', autenticar, async (req, res) => {
              RETURNING *`,
             [empresa_id, nome, descricao || '', preco, estoque || 0]
         );
-        
+
         console.log('✅ Produto criado:', result.rows[0]);
         res.json({ success: true, produto: result.rows[0] });
-        
+
     } catch (error) {
         console.error('❌ Erro no banco:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Erro ao salvar produto: ' + error.message 
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao salvar produto: ' + error.message
         });
     }
 });
@@ -152,30 +144,30 @@ app.get('/api/produtos/empresa/:empresa_id', async (req, res) => {
 // ========== ROTAS DE PEDIDOS ==========
 app.post('/api/pedidos', autenticar, async (req, res) => {
     const { empresa_id, items, endereco_entrega, forma_pagamento, taxa_entrega } = req.body;
-    
+
     if (req.usuario.tipo !== 'cliente') {
         return res.status(403).json({ success: false, message: "Apenas clientes" });
     }
-    
+
     try {
         let total = items.reduce((sum, item) => sum + (item.preco * item.quantidade), 0) + (taxa_entrega || 0);
         const codigo = 'FT' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 5).toUpperCase();
-        
+
         const result = await pool.query(
             `INSERT INTO pedidos (cliente_id, empresa_id, total, codigo_rastreamento, endereco_entrega, forma_pagamento, taxa_entrega)
              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
             [req.usuario.id, empresa_id, total, codigo, endereco_entrega, forma_pagamento, taxa_entrega]
         );
-        
+
         const pedido = result.rows[0];
-        
+
         for (let item of items) {
             await pool.query(
                 'INSERT INTO pedido_itens (pedido_id, produto_id, quantidade, preco_unitario, subtotal) VALUES ($1, $2, $3, $4, $5)',
                 [pedido.id, item.produto_id, item.quantidade, item.preco, item.preco * item.quantidade]
             );
         }
-        
+
         io.to(`empresa_${empresa_id}`).emit('novo_pedido', pedido);
         res.json({ success: true, pedido });
     } catch (error) {
@@ -252,6 +244,17 @@ io.on('connection', (socket) => {
         socket.join(sala);
         console.log(`🔊 Entrou na sala: ${sala}`);
     });
+});
+
+// ========== ROTA DE CADASTRO ==========
+
+app.post('/api/auth/cadastro', (req, res) => {
+    // Aqui você vai processar o cadastro
+    // Exemplo: pegar dados do corpo
+    const { nome, email, senha, tipo } = req.body;
+    // validar, salvar no banco etc
+    // Por enquanto, retorne uma resposta de sucesso
+    res.status(201).json({ mensagem: 'Usuário cadastrado com sucesso!' });
 });
 
 // ========== INICIAR ==========
