@@ -34,7 +34,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         if (data.success) {
             localStorage.setItem('token', data.token);
             localStorage.setItem('usuario', JSON.stringify(data.usuario));
-            
+
             // Redireciona conforme o tipo de usuário
             if (data.usuario.tipo === 'empresa') {
                 window.location.href = '/empresa/dashboard';
@@ -74,7 +74,7 @@ document.getElementById('cadastro-form').addEventListener('submit', async (e) =>
     }
 
     try {
-        const response = await fetch('/api/auth/cadastro', {
+        const response = await fetch('http://localhost:3000/api/auth/cadastro', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nome, email, senha, telefone, tipo })
@@ -85,7 +85,7 @@ document.getElementById('cadastro-form').addEventListener('submit', async (e) =>
         if (data.success) {
             localStorage.setItem('token', data.token);
             localStorage.setItem('usuario', JSON.stringify(data.usuario));
-            
+
             if (data.usuario.tipo === 'empresa') {
                 window.location.href = '/empresa/dashboard';
             } else if (data.usuario.tipo === 'entregador') {
