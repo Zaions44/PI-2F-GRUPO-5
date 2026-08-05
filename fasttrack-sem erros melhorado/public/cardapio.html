@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cardápio - FastTrack</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -39,7 +41,7 @@
         }
 
         .back-btn {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             color: white;
             border: none;
             padding: 10px 20px;
@@ -51,14 +53,14 @@
         }
 
         .back-btn:hover {
-            background: rgba(255,255,255,0.2);
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .restaurante-info {
             background: white;
             padding: 25px;
             border-radius: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
             margin-bottom: 30px;
             display: flex;
             align-items: center;
@@ -119,7 +121,7 @@
             background: white;
             border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
             transition: 0.3s;
             border: 2px solid transparent;
             display: flex;
@@ -129,7 +131,7 @@
 
         .produto-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             border-color: #4fc3f7;
         }
 
@@ -214,7 +216,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             cursor: pointer;
             transition: 0.3s;
             z-index: 100;
@@ -270,6 +272,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <!-- CABEÇALHO -->
@@ -284,7 +287,9 @@
         <div class="detalhes">
             <h2 id="restaurante-nome">Carregando...</h2>
             <p id="restaurante-endereco">Endereço não informado</p>
-            <p id="restaurante-categoria" style="display:inline-block;background:#e5e7eb;padding:2px 12px;border-radius:20px;font-size:0.8rem;">Fast Food</p>
+            <p id="restaurante-categoria"
+                style="display:inline-block;background:#e5e7eb;padding:2px 12px;border-radius:20px;font-size:0.8rem;">
+                Fast Food</p>
         </div>
     </div>
 
@@ -310,6 +315,7 @@
 
         // ========== CARRINHO ==========
         let cart = [];
+        const token = localStorage.getItem('token');
 
         function addToCart(id, nome, preco, quantidade = 1) {
             const existente = cart.find(item => item.id === id);
@@ -330,18 +336,69 @@
 
         function verCarrinho() {
             if (cart.length === 0) {
-                alert('🛒 Seu carrinho está vazio!');
+                alert('Seu carrinho está vazio!');
                 return;
             }
 
-            let msg = '🛒 MEU CARRINHO:\n\n';
-            let total = 0;
+            let msg = 'MEU CARRINHO:\n\n';
+            let totalValor = 0;
             cart.forEach(item => {
                 msg += `${item.nome} x${item.quantidade} = R$ ${(item.preco * item.quantidade).toFixed(2)}\n`;
-                total += item.preco * item.quantidade;
+                totalValor += item.preco * item.quantidade;
             });
-            msg += `\nTotal: R$ ${total.toFixed(2)}`;
-            alert(msg);
+            msg += `\nTotal: R$ ${totalValor.toFixed(2)}`;
+
+            const confirmar = confirm(msg + '\n\nDeseja finalizar o pedido?');
+            if (confirmar) {
+                finalizarPedido();
+            }
+        }
+
+        async function finalizarPedido() {
+            const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+            if (!usuario || !token) {
+                alert('Você precisa estar logado para fazer um pedido.');
+                window.location.href = '/login';
+                return;
+            }
+
+            const endereco = prompt('📍 Digite o endereço de entrega:');
+            if (!endereco) return;
+
+            const formaPagamento = prompt('💳 Forma de pagamento (Dinheiro/Cartão/PIX):') || 'Dinheiro';
+
+            try {
+                const response = await fetch('/api/pedidos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        empresa_id: parseInt(restauranteId),
+                        items: cart.map(item => ({
+                            produto_id: item.id,
+                            preco: item.preco,
+                            quantidade: item.quantidade
+                        })),
+                        endereco_entrega: endereco,
+                        forma_pagamento: formaPagamento,
+                        taxa_entrega: 5.00
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(`✅ Pedido realizado com sucesso!\nCódigo: ${data.pedido.codigo_rastreamento}`);
+                    cart = [];
+                    updateCartUI();
+                } else {
+                    alert('❌ Erro ao finalizar pedido: ' + (data.message || ''));
+                }
+            } catch (error) {
+                alert('❌ Erro ao conectar com o servidor');
+                console.error(error);
+            }
         }
 
         function showNotification(message) {
@@ -459,4 +516,5 @@
         carregarCardapio();
     </script>
 </body>
+
 </html>
