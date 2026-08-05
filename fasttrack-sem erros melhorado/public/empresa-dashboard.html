@@ -1,21 +1,32 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <!-- ... -->
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/empresa.css">
 </head>
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FastTrack - Painel da Empresa</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #f5f7fa; }
-        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f5f7fa;
+        }
+
         header {
             background: #1a1a2e;
             padding: 15px 5%;
@@ -25,37 +36,73 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-        .logo { color: white; font-size: 1.5rem; font-weight: 800; }
-        .logo span { color: #4fc3f7; }
-        .header-actions { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-        .header-actions a { color: rgba(255,255,255,0.8); text-decoration: none; transition: 0.3s; }
-        .header-actions a:hover { color: white; }
-        
-        .container { max-width: 1400px; margin: 40px auto; padding: 0 5%; }
-        
+
+        .logo {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+
+        .logo span {
+            color: #4fc3f7;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header-actions a {
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            transition: 0.3s;
+        }
+
+        .header-actions a:hover {
+            color: white;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 0 5%;
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 40px;
         }
+
         .stat-card {
             background: white;
             padding: 20px;
             border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             text-align: center;
         }
-        .stat-card .number { font-size: 2rem; font-weight: 700; color: #1a1a2e; }
-        .stat-card .label { color: #6b7280; font-size: 0.9rem; }
-        
+
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a2e;
+        }
+
+        .stat-card .label {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
         .actions-bar {
             display: flex;
             gap: 15px;
             margin-bottom: 30px;
             flex-wrap: wrap;
         }
-        
+
         .btn-primary {
             background: #4fc3f7;
             color: #1a1a2e;
@@ -69,22 +116,50 @@
             align-items: center;
             gap: 8px;
         }
-        .btn-primary:hover { background: #38bdf8; transform: translateY(-2px); }
-        .btn-green { background: #10b981; color: white; }
-        .btn-green:hover { background: #059669; }
-        .btn-orange { background: #f59e0b; color: white; }
-        .btn-orange:hover { background: #d97706; }
-        .btn-red { background: #ef4444; color: white; }
-        .btn-red:hover { background: #dc2626; }
-        
-        .pedidos-list, .produtos-list {
+
+        .btn-primary:hover {
+            background: #38bdf8;
+            transform: translateY(-2px);
+        }
+
+        .btn-green {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-green:hover {
+            background: #059669;
+        }
+
+        .btn-orange {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .btn-orange:hover {
+            background: #d97706;
+        }
+
+        .btn-red {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-red:hover {
+            background: #dc2626;
+        }
+
+        .pedidos-list,
+        .produtos-list {
             background: white;
             border-radius: 15px;
             padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             margin-bottom: 30px;
         }
-        .pedido-item, .produto-item {
+
+        .pedido-item,
+        .produto-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -93,8 +168,12 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-        .pedido-item:last-child, .produto-item:last-child { border-bottom: none; }
-        
+
+        .pedido-item:last-child,
+        .produto-item:last-child {
+            border-bottom: none;
+        }
+
         .status-select {
             padding: 5px 10px;
             border-radius: 10px;
@@ -102,23 +181,55 @@
             font-size: 0.9rem;
             cursor: pointer;
         }
-        .status-select:focus { outline: none; border-color: #4fc3f7; }
-        
-        .badge { 
-            display: inline-block; 
-            padding: 3px 12px; 
-            border-radius: 20px; 
-            font-size: 0.75rem; 
+
+        .status-select:focus {
+            outline: none;
+            border-color: #4fc3f7;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
             font-weight: 600;
         }
-        .badge-recebido { background: #fef3c7; color: #92400e; }
-        .badge-preparando { background: #dbeafe; color: #1e40af; }
-        .badge-pronto { background: #d1fae5; color: #065f46; }
-        .badge-saiu_entrega { background: #fce4ec; color: #9a3412; }
-        .badge-entregue { background: #d1fae5; color: #065f46; }
-        .badge-baixo { background: #fee2e2; color: #991b1b; }
-        .badge-normal { background: #d1fae5; color: #065f46; }
-        
+
+        .badge-recebido {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-preparando {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-pronto {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-saiu_entrega {
+            background: #fce4ec;
+            color: #9a3412;
+        }
+
+        .badge-entregue {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-baixo {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-normal {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
         .produto-img {
             width: 50px;
             height: 50px;
@@ -126,7 +237,7 @@
             object-fit: cover;
             background: #f3f4f6;
         }
-        
+
         .modal {
             display: none;
             position: fixed;
@@ -134,12 +245,16 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.5);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
-        .modal.active { display: flex; }
+
+        .modal.active {
+            display: flex;
+        }
+
         .modal-content {
             background: white;
             border-radius: 20px;
@@ -149,15 +264,25 @@
             max-height: 90vh;
             overflow-y: auto;
         }
-        .modal-content h3 { margin-bottom: 20px; }
-        .modal-content .form-group { margin-bottom: 15px; }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+        }
+
+        .modal-content .form-group {
+            margin-bottom: 15px;
+        }
+
         .modal-content .form-group label {
             display: block;
             font-weight: 600;
             margin-bottom: 5px;
             font-size: 0.9rem;
         }
-        .modal-content input, .modal-content textarea, .modal-content select {
+
+        .modal-content input,
+        .modal-content textarea,
+        .modal-content select {
             width: 100%;
             padding: 10px 15px;
             border: 1px solid #e5e7eb;
@@ -165,9 +290,13 @@
             font-size: 1rem;
             outline: none;
         }
-        .modal-content input:focus, .modal-content textarea:focus, .modal-content select:focus {
+
+        .modal-content input:focus,
+        .modal-content textarea:focus,
+        .modal-content select:focus {
             border-color: #4fc3f7;
         }
+
         .modal-content .preview-img {
             max-width: 100%;
             max-height: 200px;
@@ -175,16 +304,26 @@
             margin-top: 10px;
             display: none;
         }
+
         .modal-actions {
             display: flex;
             gap: 10px;
             justify-content: flex-end;
             margin-top: 20px;
         }
-        
-        .empty-state { text-align: center; padding: 60px 0; color: #6b7280; }
-        .empty-state i { font-size: 4rem; margin-bottom: 20px; display: block; }
-        
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 0;
+            color: #6b7280;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            display: block;
+        }
+
         .tabs {
             display: flex;
             gap: 10px;
@@ -192,6 +331,7 @@
             border-bottom: 2px solid #e5e7eb;
             flex-wrap: wrap;
         }
+
         .tab-btn {
             padding: 12px 24px;
             background: none;
@@ -201,19 +341,35 @@
             color: #6b7280;
             transition: 0.3s;
         }
+
         .tab-btn.active {
             color: #1a1a2e;
             border-bottom: 3px solid #4fc3f7;
         }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
         @media (max-width: 768px) {
-            .pedido-item, .produto-item { flex-direction: column; align-items: flex-start; }
-            .header-actions { gap: 10px; }
+
+            .pedido-item,
+            .produto-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-actions {
+                gap: 10px;
+            }
         }
     </style>
 </head>
+
 <body>
     <header>
         <div class="logo">Fast<span>Track</span></div>
@@ -331,6 +487,7 @@
         }
 
         const token = localStorage.getItem('token');
+        let imagemBase64 = null; // guarda a imagem do produto selecionada no formulário
 
         socket.emit('entrar_sala', `empresa_${usuario.id}`);
         socket.on('novo_pedido', (pedido) => {
@@ -343,7 +500,7 @@
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
+
             if (tab === 'pedidos') {
                 document.querySelector('.tab-btn:first-child').classList.add('active');
                 document.getElementById('tab-pedidos').classList.add('active');
@@ -361,22 +518,22 @@
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                
+
                 const container = document.getElementById('pedidos-container');
                 if (!data.success || data.pedidos.length === 0) {
                     container.innerHTML = `<div class="empty-state"><i class="fa-regular fa-clock"></i>Nenhum pedido recebido ainda</div>`;
                     return;
                 }
-                
+
                 const pedidosEmpresa = data.pedidos;
-                
+
                 document.getElementById('total-pedidos').textContent = pedidosEmpresa.length;
                 const hoje = new Date().toDateString();
                 const pedidosHoje = pedidosEmpresa.filter(p => new Date(p.data_pedido).toDateString() === hoje);
                 document.getElementById('pedidos-hoje').textContent = pedidosHoje.length;
                 const receita = pedidosHoje.reduce((sum, p) => sum + parseFloat(p.total), 0);
                 document.getElementById('receita-hoje').textContent = `R$ ${receita.toFixed(2)}`;
-                
+
                 container.innerHTML = pedidosEmpresa.map(p => {
                     const statusClass = `badge-${p.status}`;
                     const statusLabels = {
@@ -387,7 +544,7 @@
                         'saiu_entrega': '🚴 Saiu para entrega',
                         'entregue': '🎉 Entregue'
                     };
-                    
+
                     return `
                         <div class="pedido-item">
                             <div>
@@ -436,21 +593,22 @@
         }
 
         // ========== CARREGAR PRODUTOS ==========
-       async function carregarProdutos() {
-    try {
-        const response = await fetch('/api/produtos/empresa/1');
-        const data = await response.json();
-        
-        const container = document.getElementById('produtos-container');
-        document.getElementById('produtos-total').textContent = data.produtos?.length || 0;
-        
-        if (!data.success || data.produtos.length === 0) {
-            container.innerHTML = `<div class="empty-state"><i class="fa-regular fa-box"></i>Nenhum produto cadastrado</div>`;
-            return;
-        }
-        
-        container.innerHTML = data.produtos.map(p => `
+        async function carregarProdutos() {
+            try {
+                const response = await fetch('/api/produtos/empresa/1');
+                const data = await response.json();
+
+                const container = document.getElementById('produtos-container');
+                document.getElementById('produtos-total').textContent = data.produtos?.length || 0;
+
+                if (!data.success || data.produtos.length === 0) {
+                    container.innerHTML = `<div class="empty-state"><i class="fa-regular fa-box"></i>Nenhum produto cadastrado</div>`;
+                    return;
+                }
+
+                container.innerHTML = data.produtos.map(p => `
             <div class="produto-item">
+            ${p.imagem ? `<img src="${p.imagem}" class="produto-img" alt="${p.nome}">` : ''}
                 <div>
                     <div><strong>${p.nome}</strong></div>
                     <div style="font-size:0.8rem;color:#6b7280;">${p.descricao || 'Sem descrição'}</div>
@@ -459,127 +617,147 @@
                 </div>
             </div>
         `).join('');
-    } catch (error) {
-        console.error('Erro ao carregar produtos:', error);
-    }
-}
+            } catch (error) {
+                console.error('Erro ao carregar produtos:', error);
+            }
+        }
 
         // ========== ADICIONAR PRODUTO (COM IMAGEM) ==========
         // ========== ADICIONAR PRODUTO - VERSÃO FUNCIONANDO ==========
-// ==========================================
-// FUNÇÕES AUXILIARES
-// ==========================================
+        // ==========================================
+        // FUNÇÕES AUXILIARES
+        // ==========================================
 
-function capturarDadosFormulario() {
-    return {
-        nome: document.getElementById('produto-nome').value.trim(),
-        descricao: document.getElementById('produto-desc').value.trim() || '',
-        preco: parseFloat(document.getElementById('produto-preco').value),
-        estoque: parseInt(document.getElementById('produto-estoque').value) || 0
-    };
-}
+        function previewImagem(event) {
+            const arquivo = event.target.files[0];
+            if (!arquivo) {
+                imagemBase64 = null;
+                document.getElementById('preview-img').style.display = 'none';
+                return;
+            }
 
-function validarProduto(dados) {
-    const erros = [];
-    
-    if (!dados.nome || dados.nome.length < 2) {
-        erros.push('Nome deve ter pelo menos 2 caracteres');
-    }
-    
-    if (!dados.preco || isNaN(dados.preco) || dados.preco <= 0) {
-        erros.push('Preço deve ser maior que zero');
-    }
-    
-    if (dados.estoque < 0 || isNaN(dados.estoque)) {
-        erros.push('Estoque não pode ser negativo');
-    }
-    
-    return { valido: erros.length === 0, erros };
-}
+            const leitor = new FileReader();
+            leitor.onload = () => {
+                imagemBase64 = leitor.result; // "data:image/png;base64,...."
+                const preview = document.getElementById('preview-img');
+                preview.src = imagemBase64;
+                preview.style.display = 'block';
+            };
+            leitor.readAsDataURL(arquivo);
+        }
 
-async function criarProduto(dados) {
-    const token = localStorage.getItem('token');
-    
-    if (!token) {
-        throw new Error('Token não encontrado. Faça login novamente.');
-    }
-    
-    const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
-    const dadosCompletos = {
-        ...dados,
-        empresa_id: usuario.id || 1
-    };
-    
-    const response = await fetch('/api/produtos', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(dadosCompletos)
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Erro ao criar produto');
-    }
-    
-    return data;
-}
+        function capturarDadosFormulario() {
+            return {
+                nome: document.getElementById('produto-nome').value.trim(),
+                descricao: document.getElementById('produto-desc').value.trim() || '',
+                preco: parseFloat(document.getElementById('produto-preco').value),
+                estoque: parseInt(document.getElementById('produto-estoque').value) || 0,
+                imagem: imagemBase64
+            };
+        }
 
-function limparFormulario() {
-    document.getElementById('form-produto').reset();
-    document.getElementById('preview-img').style.display = 'none';
-    document.getElementById('preview-img').src = '';
-}
+        function validarProduto(dados) {
+            const erros = [];
 
-// ==========================================
-// EVENTO PRINCIPAL
-// ==========================================
+            if (!dados.nome || dados.nome.length < 2) {
+                erros.push('Nome deve ter pelo menos 2 caracteres');
+            }
 
-document.getElementById('form-produto').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // 1. Capturar dados
-    const dados = capturarDadosFormulario();
-    
-    // 2. Validar dados
-    const validacao = validarProduto(dados);
-    if (!validacao.valido) {
-        showNotification(`❌ ${validacao.erros.join('\n')}`, 'error');
-        return;
-    }
-    
-    // 3. Mostrar loading
-    const btn = e.target.querySelector('button[type="submit"]');
-    const textoOriginal = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
-    btn.disabled = true;
-    
-    try {
-        // 4. Enviar para o servidor
-        const resultado = await criarProduto(dados);
-        
-        // 5. Feedback de sucesso
-        showNotification(' Produto criado com sucesso!', 'success');
-        fecharModal('modal-produto');
-        limparFormulario();
-        
-        // 6. Atualizar listas
-        await carregarProdutos();
-        await carregarPedidos();
-        
-    } catch (error) {
-        // 7. Tratamento de erro
-        console.error(' Erro:', error);
-        showNotification(` ${error.message}`, 'error');
-    } finally {
-        // 8. Remover loading
-        btn.innerHTML = textoOriginal;
-        btn.disabled = false;
-    }
-});
+            if (!dados.preco || isNaN(dados.preco) || dados.preco <= 0) {
+                erros.push('Preço deve ser maior que zero');
+            }
+
+            if (dados.estoque < 0 || isNaN(dados.estoque)) {
+                erros.push('Estoque não pode ser negativo');
+            }
+
+            return { valido: erros.length === 0, erros };
+        }
+
+        async function criarProduto(dados) {
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                throw new Error('Token não encontrado. Faça login novamente.');
+            }
+
+            const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+            const dadosCompletos = {
+                ...dados,
+                empresa_id: usuario.id || 1
+            };
+
+            const response = await fetch('/api/produtos', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(dadosCompletos)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Erro ao criar produto');
+            }
+
+            return data;
+        }
+
+        function limparFormulario() {
+            document.getElementById('form-produto').reset();
+            document.getElementById('preview-img').style.display = 'none';
+            document.getElementById('preview-img').src = '';
+            imagemBase64 = null;
+        }
+
+        // ==========================================
+        // EVENTO PRINCIPAL
+        // ==========================================
+
+        document.getElementById('form-produto').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // 1. Capturar dados
+            const dados = capturarDadosFormulario();
+
+            // 2. Validar dados
+            const validacao = validarProduto(dados);
+            if (!validacao.valido) {
+                showNotification(`❌ ${validacao.erros.join('\n')}`, 'error');
+                return;
+            }
+
+            // 3. Mostrar loading
+            const btn = e.target.querySelector('button[type="submit"]');
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+            btn.disabled = true;
+
+            try {
+                // 4. Enviar para o servidor
+                const resultado = await criarProduto(dados);
+
+                // 5. Feedback de sucesso
+                showNotification(' Produto criado com sucesso!', 'success');
+                fecharModal('modal-produto');
+                limparFormulario();
+
+                // 6. Atualizar listas
+                await carregarProdutos();
+                await carregarPedidos();
+
+            } catch (error) {
+                // 7. Tratamento de erro
+                console.error(' Erro:', error);
+                showNotification(` ${error.message}`, 'error');
+            } finally {
+                // 8. Remover loading
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+            }
+        });
 
         // ========== REPOR ESTOQUE ==========
         async function carregarProdutosEstoque() {
@@ -588,7 +766,7 @@ document.getElementById('form-produto').addEventListener('submit', async (e) => 
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     const select = document.getElementById('estoque-produto');
                     select.innerHTML = data.produtos.map(p => `
@@ -616,26 +794,26 @@ document.getElementById('form-produto').addEventListener('submit', async (e) => 
         async function reporEstoque() {
             const produtoId = document.getElementById('estoque-produto').value;
             const quantidade = parseInt(document.getElementById('estoque-quantidade').value);
-            
+
             if (!produtoId || !quantidade || quantidade < 1) {
                 showNotification('❌ Selecione um produto e uma quantidade válida', 'error');
                 return;
             }
-            
+
             try {
                 const response = await fetch(`/api/produtos/empresa/1`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
                 const produto = data.produtos.find(p => p.id === parseInt(produtoId));
-                
+
                 if (!produto) {
                     showNotification('❌ Produto não encontrado', 'error');
                     return;
                 }
-                
+
                 const novoEstoque = produto.estoque + quantidade;
-                
+
                 const updateResponse = await fetch(`/api/produtos/${produtoId}/estoque`, {
                     method: 'PUT',
                     headers: {
@@ -644,9 +822,9 @@ document.getElementById('form-produto').addEventListener('submit', async (e) => 
                     },
                     body: JSON.stringify({ estoque: novoEstoque })
                 });
-                
+
                 const result = await updateResponse.json();
-                
+
                 if (result.success) {
                     showNotification(`✅ Estoque reposto!\n${produto.nome}: ${novoEstoque} unidades`, 'success');
                     fecharModal('modal-estoque');
@@ -695,7 +873,7 @@ document.getElementById('form-produto').addEventListener('submit', async (e) => 
             `;
             div.innerHTML = message;
             document.body.appendChild(div);
-            
+
             setTimeout(() => {
                 div.style.animation = 'slideOut 0.3s ease';
                 setTimeout(() => div.remove(), 300);
@@ -726,7 +904,6 @@ document.getElementById('form-produto').addEventListener('submit', async (e) => 
         `;
         document.head.appendChild(styleSheet);
     </script>
-    <script src="/socket.io/socket.io.js"></script>
-<script src="/js/empresa-dashboard.js"></script>
 </body>
+
 </html>
