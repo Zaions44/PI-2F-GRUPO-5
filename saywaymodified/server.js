@@ -20,6 +20,10 @@ app.use(express.static('public'));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fasttrack_secret_2024';
 
+// ==========================================
+// MIDDLEWARE DE AUTENTICAÇÃO
+// ==========================================
+
 function autenticar(req, res, next) {
     const token = req.headers['authorization']?.split(' ')[1];
     if (!token) return res.status(401).json({ success: false, message: "Token não fornecido" });
@@ -31,9 +35,42 @@ function autenticar(req, res, next) {
     });
 }
 
-// ========== ROTAS DE AUTENTICAÇÃO ==========
+// ==========================================
+// ROTA DE CADASTRO
+// ==========================================
 
-// ========== ROTAS DE AUTENTICAÇÃO ==========
+app.post('/api/auth/cadastro', async (req, res) => {
+    const { nome, email, senha, telefone, tipo } = req.body;
+    try {
+        const existe = await pool.query('SELECT id FROM usuarios WHERE email = $1', [email]);
+        if (existe.rows.length > 0) {
+            return res.status(400).json({ success: false, message: "Email já cadastrado" });
+        }
+
+        const senhaHash = await bcrypt.hash(senha, 10);
+        const result = await pool.query(
+            'INSERT INTO usuarios (nome, email, senha, telefone, tipo) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, email, tipo',
+            [nome, email, senhaHash, telefone, tipo || 'cliente']
+        );
+
+        const usuario = result.rows[0];
+        const token = jwt.sign(
+            { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        res.json({ success: true, token, usuario });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Erro interno" });
+    }
+});
+
+// ==========================================
+// ROTA DE LOGIN (ÚNICA E CORRETA)
+// ==========================================
+
 app.post('/api/auth/login', async (req, res) => {
     const { email, senha } = req.body;
     console.log('📝 Tentativa de login:', email);
@@ -49,17 +86,14 @@ app.post('/api/auth/login', async (req, res) => {
         const usuario = result.rows[0];
         console.log('👤 Usuário encontrado:', usuario.nome);
         console.log('🔑 Senha no banco:', usuario.senha);
-        console.log('🔑 Senha digitada:', senha);
         
         let senhaValida = false;
         
-        // ⚠️ VERIFICA SE A SENHA É HASH OU TEXTO PURO
+        // VERIFICA SE A SENHA É HASH OU TEXTO PURO
         if (usuario.senha && usuario.senha.startsWith('$2b$')) {
-            // É um hash do bcrypt
             console.log('🔐 Senha é hash, usando bcrypt...');
             senhaValida = await bcrypt.compare(senha, usuario.senha);
         } else {
-            // É texto puro
             console.log('📝 Senha é texto puro, comparando diretamente...');
             senhaValida = (senha === usuario.senha);
         }
@@ -92,31 +126,10 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-app.post('/api/auth/login', async (req, res) => {
-    const { email, senha } = req.body;
-    try {
-        const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-        if (result.rows.length === 0) {
-            return res.status(401).json({ success: false, message: "Email ou senha incorretos" });
-        }
+// ==========================================
+// ROTAS DE EMPRESAS
+// ==========================================
 
-        const usuario = result.rows[0];
-        const senhaValida = await bcrypt.compare(senha, usuario.senha);
-        if (!senhaValida) {
-            return res.status(401).json({ success: false, message: "Email ou senha incorretos" });
-        }
-
-        await pool.query('UPDATE usuarios SET ultimo_login = NOW() WHERE id = $1', [usuario.id]);
-        const token = jwt.sign({ id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo, is_dev: usuario.is_dev }, JWT_SECRET, { expiresIn: '7d' });
-
-        res.json({ success: true, token, usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo, is_dev: usuario.is_dev } });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Erro interno" });
-    }
-});
-
-// ========== ROTAS DE EMPRESAS ==========
 app.get('/api/empresas', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM empresas WHERE ativo = true');
@@ -126,7 +139,10 @@ app.get('/api/empresas', async (req, res) => {
     }
 });
 
-// ========== ROTA DE PRODUTOS (SEM IMAGEM) ==========
+// ==========================================
+// ROTAS DE PRODUTOS
+// ==========================================
+
 app.post('/api/produtos', autenticar, async (req, res) => {
     console.log('📦 Recebendo produto:', req.body);
 
@@ -175,7 +191,10 @@ app.get('/api/produtos/empresa/:empresa_id', async (req, res) => {
     }
 });
 
-// ========== ROTAS DE PEDIDOS ==========
+// ==========================================
+// ROTAS DE PEDIDOS
+// ==========================================
+
 app.post('/api/pedidos', autenticar, async (req, res) => {
     const { empresa_id, items, endereco_entrega, forma_pagamento, taxa_entrega } = req.body;
 
@@ -239,15 +258,16 @@ app.put('/api/pedidos/:id/status', autenticar, async (req, res) => {
     }
 });
 
-// ========== ROTA DE PEDIDOS DA EMPRESA ==========
+// ==========================================
+// ROTA DE PEDIDOS DA EMPRESA
+// ==========================================
+
 app.get('/api/pedidos/empresa', autenticar, async (req, res) => {
-    // Verifica se é uma empresa
     if (req.usuario.tipo !== 'empresa') {
         return res.status(403).json({ success: false, message: "Apenas empresas" });
     }
 
     try {
-        // Busca a empresa do usuário logado
         const empresa = await pool.query(
             'SELECT id FROM empresas WHERE usuario_id = $1',
             [req.usuario.id]
@@ -259,7 +279,6 @@ app.get('/api/pedidos/empresa', autenticar, async (req, res) => {
 
         const empresaId = empresa.rows[0].id;
 
-        // Busca os pedidos da empresa
         const result = await pool.query(
             `SELECT p.*, u.nome as cliente_nome 
              FROM pedidos p
@@ -276,7 +295,10 @@ app.get('/api/pedidos/empresa', autenticar, async (req, res) => {
     }
 });
 
-// ========== ROTAS DE ENTREGADOR ==========
+// ==========================================
+// ROTAS DE ENTREGADOR
+// ==========================================
+
 app.get('/api/pedidos/entregador/disponiveis', async (req, res) => {
     try {
         const result = await pool.query(
@@ -301,14 +323,56 @@ app.put('/api/pedidos/:id/entregador', autenticar, async (req, res) => {
     }
 });
 
-// ========== SERVIR PÁGINAS ==========
+// ==========================================
+// ROTA DE LOCALIZAÇÃO DO ENTREGADOR (TEMPO REAL)
+// ==========================================
+
+app.post('/api/entregador/localizacao', autenticar, async (req, res) => {
+    const { pedido_id, latitude, longitude } = req.body;
+    
+    if (req.usuario.tipo !== 'entregador') {
+        return res.status(403).json({ success: false, message: "Apenas entregadores" });
+    }
+    
+    try {
+        // Salvar localização no banco
+        await pool.query(
+            `INSERT INTO entregador_localizacao (entregador_id, pedido_id, latitude, longitude) 
+             VALUES ($1, $2, $3, $4)`,
+            [req.usuario.id, pedido_id, latitude, longitude]
+        );
+        
+        // Emitir para o cliente via WebSocket
+        const pedido = await pool.query('SELECT cliente_id FROM pedidos WHERE id = $1', [pedido_id]);
+        if (pedido.rows.length > 0) {
+            io.to(`cliente_${pedido.rows[0].cliente_id}`).emit('localizacao_atualizada', { 
+                pedido_id, 
+                latitude, 
+                longitude 
+            });
+        }
+        
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao salvar localização:', error);
+        res.status(500).json({ success: false, message: "Erro ao atualizar localização" });
+    }
+});
+
+// ==========================================
+// SERVIR PÁGINAS
+// ==========================================
+
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/cliente/pedidos', (req, res) => res.sendFile(path.join(__dirname, 'public', 'cliente-pedidos.html')));
 app.get('/empresa/dashboard', (req, res) => res.sendFile(path.join(__dirname, 'public', 'empresa-dashboard.html')));
 app.get('/entregador/pedidos', (req, res) => res.sendFile(path.join(__dirname, 'public', 'entregador-pedidos.html')));
 
-// ========== WEBSOCKET ==========
+// ==========================================
+// WEBSOCKET
+// ==========================================
+
 io.on('connection', (socket) => {
     console.log('📡 Cliente conectado');
     socket.on('entrar_sala', (sala) => {
@@ -317,11 +381,10 @@ io.on('connection', (socket) => {
     });
 });
 
-// ========== ROTA DE CADASTRO ==========
+// ==========================================
+// INICIAR SERVIDOR
+// ==========================================
 
-
-
-// ========== INICIAR ==========
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`
@@ -332,6 +395,7 @@ server.listen(PORT, () => {
 ║  🗄️  Banco: PostgreSQL                              ║
 ║  🔐 Login: burger@fasttrack.com / 123456            ║
 ║  🔐 Login: joao@email.com / 123456                  ║
+║  🗺️  Rastreamento em tempo real ativo!              ║
 ╚══════════════════════════════════════════════════════╝
     `);
 });

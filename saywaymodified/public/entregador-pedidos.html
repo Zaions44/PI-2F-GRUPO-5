@@ -1,31 +1,20 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
-<head>
-    <!-- ... -->
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/entregador.css">
-</head>
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FastTrack - Entregador</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f5f7fa;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f5f7fa; }
+        
         header {
             background: #1a1a2e;
             padding: 15px 5%;
@@ -33,41 +22,21 @@
             justify-content: space-between;
             align-items: center;
         }
-
-        .logo {
-            color: white;
-            font-size: 1.5rem;
-            font-weight: 800;
-        }
-
-        .logo span {
-            color: #4fc3f7;
-        }
-
-        .header-actions a {
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            margin-left: 20px;
-        }
-
-        .header-actions a:hover {
-            color: white;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 0 5%;
-        }
-
+        .logo { color: white; font-size: 1.5rem; font-weight: 800; }
+        .logo span { color: #4fc3f7; }
+        .header-actions a { color: rgba(255,255,255,0.8); text-decoration: none; margin-left: 20px; }
+        .header-actions a:hover { color: white; }
+        
+        .container { max-width: 900px; margin: 40px auto; padding: 0 5%; }
+        
         .pedido-card {
             background: white;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            border-left: 4px solid #4fc3f7;
         }
-
         .pedido-card .btn-aceitar {
             background: #4fc3f7;
             color: #1a1a2e;
@@ -77,36 +46,70 @@
             font-weight: 600;
             cursor: pointer;
             margin-top: 10px;
+            width: 100%;
+            transition: 0.3s;
         }
-
-        .pedido-card .btn-aceitar:hover {
-            background: #38bdf8;
+        .pedido-card .btn-aceitar:hover { background: #38bdf8; transform: translateY(-2px); }
+        .badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; background: #d1fae5; color: #065f46; }
+        
+        .empty-state { text-align: center; padding: 60px 0; color: #6b7280; }
+        .empty-state i { font-size: 4rem; margin-bottom: 20px; display: block; }
+        
+        /* Mapa */
+        #mapa-container {
+            display: none;
+            margin-top: 20px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-
-        .empty-state {
-            text-align: center;
-            padding: 60px 0;
-            color: #6b7280;
+        #mapa-container.active { display: block; }
+        #mapa {
+            height: 400px;
+            width: 100%;
+            background: #e5e7eb;
         }
-
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            display: block;
+        
+        .info-entrega {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-
-        .badge {
-            display: inline-block;
-            padding: 3px 12px;
-            border-radius: 20px;
-            font-size: 0.75rem;
+        .info-entrega .status {
+            color: #10b981;
             font-weight: 600;
-            background: #d1fae5;
-            color: #065f46;
+        }
+        .info-entrega .status i { animation: pulse 1.5s infinite; }
+        
+        .status-localizacao {
+            background: #fef3c7;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #92400e;
+            display: none;
+            margin-top: 10px;
+        }
+        .status-localizacao.active { display: block; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+        
+        @media (max-width: 768px) {
+            #mapa { height: 300px; }
         }
     </style>
 </head>
-
 <body>
     <header>
         <div class="logo">Fast<span>Track</span></div>
@@ -118,11 +121,24 @@
 
     <div class="container">
         <h2 style="margin-bottom: 30px;">📦 Pedidos Disponíveis</h2>
-        <button id="btnModoTeste"
-            style="display:none; background:#fbbf24; color:#1a1a2e; border:none; padding:10px 20px; border-radius:10px; font-weight:600; cursor:pointer; margin-bottom:20px;"
-            onclick="ativarModoTeste()">🧪 Ativar Modo Teste (Dev)</button>
         <div id="pedidos-container">
-            <div class="empty-state"><i class="fa-regular fa-clock"></i>Carregando pedidos...</div>
+            <div class="empty-state"><i class="fa-regular fa-clock"></i> Carregando pedidos...</div>
+        </div>
+        
+        <!-- Status da Localização -->
+        <div class="status-localizacao" id="status-localizacao">
+            <i class="fa-solid fa-satellite-dish"></i> 
+            <span id="status-texto">Obtendo localização...</span>
+        </div>
+        
+        <!-- Mapa -->
+        <div id="mapa-container">
+            <div id="mapa"></div>
+            <div class="info-entrega">
+                <span><strong>📍 Pedido:</strong> <span id="pedido-rastreio">#FT123ABC</span></span>
+                <span class="status"><i class="fa-solid fa-circle"></i> Entregador a caminho</span>
+                <span><strong>⏱️ Atualização:</strong> <span id="tempo-estimado">Em tempo real</span></span>
+            </div>
         </div>
     </div>
 
@@ -133,30 +149,36 @@
         }
 
         const token = localStorage.getItem('token');
-        let pedidoAtivoId = null;
+        let mapa = null;
+        let marcador = null;
+        let watchId = null;
+        let pedidoAtivo = null;
 
-        if (usuario.is_dev) {
-            document.getElementById('btnModoTeste').style.display = 'inline-block';
-        }
+        // ==========================================
+        // CARREGAR PEDIDOS DISPONÍVEIS
+        // ==========================================
+
         async function carregarPedidos() {
             try {
                 const response = await fetch('/api/pedidos/entregador/disponiveis');
                 const data = await response.json();
-
+                
                 const container = document.getElementById('pedidos-container');
                 if (!data.success || data.pedidos.length === 0) {
-                    container.innerHTML = `<div class="empty-state"><i class="fa-regular fa-clock"></i>Nenhum pedido disponível</div>`;
+                    container.innerHTML = `<div class="empty-state"><i class="fa-regular fa-clock"></i> Nenhum pedido disponível</div>`;
                     return;
                 }
-
+                
                 container.innerHTML = data.pedidos.map(p => `
                     <div class="pedido-card">
                         <div><strong>${p.empresa_nome}</strong></div>
                         <div style="color:#6b7280;">Código: ${p.codigo_rastreamento}</div>
                         <div style="color:#6b7280;">Total: R$ ${parseFloat(p.total).toFixed(2)}</div>
-                        <div style="color:#6b7280;">Endereço: ${p.endereco_entrega}</div>
+                        <div style="color:#6b7280;">📍 ${p.endereco_entrega}</div>
                         <span class="badge">✅ Pronto para retirada</span>
-                        <button class="btn-aceitar" onclick="aceitarPedido(${p.id})">Aceitar Entrega</button>
+                        <button class="btn-aceitar" onclick="aceitarPedido(${p.id}, '${p.codigo_rastreamento}')">
+                            🚴 Aceitar Entrega
+                        </button>
                     </div>
                 `).join('');
             } catch (error) {
@@ -164,94 +186,191 @@
             }
         }
 
-        async function aceitarPedido(pedidoId) {
+        // ==========================================
+        // ACEITAR PEDIDO - INICIA RASTREAMENTO REAL
+        // ==========================================
+
+        async function aceitarPedido(pedidoId, codigo) {
             try {
+                // Aceitar o pedido
                 const response = await fetch(`/api/pedidos/${pedidoId}/entregador`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await response.json();
+                
                 if (data.success) {
-                    alert('✅ Pedido aceito! Atualize o status no app da empresa.');
-                    carregarPedidos();
-
-                    pedidoAtivoId = pedidoId;
+                    alert('✅ Pedido aceito! Iniciando rastreamento em tempo real...');
+                    document.getElementById('pedido-rastreio').textContent = codigo;
+                    pedidoAtivo = pedidoId;
+                    
+                    // Mostrar status
+                    const statusDiv = document.getElementById('status-localizacao');
+                    statusDiv.classList.add('active');
+                    document.getElementById('status-texto').textContent = 'Solicitando permissão de localização...';
+                    
+                    // Atualizar status do pedido
+                    await fetch(`/api/pedidos/${pedidoId}/status`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ status: 'saiu_entrega' })
+                    });
+                    
+                    // INICIAR LOCALIZAÇÃO REAL
                     iniciarRastreamentoReal(pedidoId);
+                    
+                    carregarPedidos();
+                    showNotification('🚴 Rastreamento em tempo real iniciado!', 'success');
                 }
             } catch (error) {
-                alert('Erro ao aceitar pedido');
+                alert('❌ Erro ao aceitar pedido');
+                console.error(error);
             }
         }
 
-        function enviarLocalizacao(pedidoId, latitude, longitude) {
-            fetch('/api/entregador/localizacao', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ pedido_id: pedidoId, latitude, longitude })
-            });
-        }
+        // ==========================================
+        // RASTREAMENTO REAL COM GEOLOCATION API
+        // ==========================================
 
         function iniciarRastreamentoReal(pedidoId) {
+            // Mostrar container do mapa
+            document.getElementById('mapa-container').classList.add('active');
+            
+            // Verificar se o navegador suporta geolocalização
             if (!navigator.geolocation) {
-                alert('Geolocalização não suportada neste navegador');
+                alert('❌ Seu navegador não suporta geolocalização!');
                 return;
             }
-            navigator.geolocation.watchPosition(
-                (position) => enviarLocalizacao(pedidoId, position.coords.latitude, position.coords.longitude),
-                (erro) => console.error('Erro de geolocalização:', erro),
-                { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+            
+            // Criar mapa (inicialmente em São Paulo)
+            mapa = L.map('mapa').setView([-23.5505, -46.6333], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(mapa);
+            
+            // Marcador do entregador
+            marcador = L.marker([-23.5505, -46.6333], {
+                icon: L.divIcon({
+                    className: 'entregador-marker',
+                    html: '🚴',
+                    iconSize: [35, 35],
+                    iconAnchor: [17, 17]
+                })
+            }).addTo(mapa);
+            
+            document.getElementById('status-texto').textContent = 'Obtendo localização...';
+            
+            // OBSERVAR LOCALIZAÇÃO EM TEMPO REAL
+            watchId = navigator.geolocation.watchPosition(
+                // Sucesso - posição atualizada
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const precisao = position.coords.accuracy;
+                    
+                    console.log(`📍 Posição atual: ${lat}, ${lng} (precisão: ${precisao}m)`);
+                    
+                    // Atualizar status
+                    document.getElementById('status-texto').textContent = 
+                        `📍 Localização atualizada! (precisão: ${Math.round(precisao)}m)`;
+                    document.getElementById('status-localizacao').style.background = '#d1fae5';
+                    document.getElementById('status-localizacao').style.color = '#065f46';
+                    
+                    // Atualizar marcador no mapa
+                    marcador.setLatLng([lat, lng]);
+                    mapa.panTo([lat, lng]);
+                    
+                    // ENVIAR LOCALIZAÇÃO PARA O SERVIDOR
+                    await fetch('/api/entregador/localizacao', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            pedido_id: pedidoId,
+                            latitude: lat,
+                            longitude: lng
+                        })
+                    });
+                },
+                // Erro - não conseguiu obter localização
+                (error) => {
+                    console.error('❌ Erro de geolocalização:', error);
+                    document.getElementById('status-texto').textContent = 
+                        `⚠️ Erro: ${error.message}. Verifique as permissões do navegador.`;
+                    document.getElementById('status-localizacao').style.background = '#fee2e2';
+                    document.getElementById('status-localizacao').style.color = '#991b1b';
+                },
+                // Configurações
+                {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                }
             );
         }
 
-        async function ativarModoTeste() {
-            if (!usuario.is_dev) {
-                alert('Modo teste disponível apenas para contas de desenvolvedor');
-                return;
-            }
-            if (!pedidoAtivoId) {
-                alert('Aceite um pedido antes de ativar o modo teste');
-                return;
-            }
+        // ==========================================
+        // PARAR RASTREAMENTO
+        // ==========================================
 
-            // TODO: trocar por coordenadas reais (empresa → endereço de entrega) quando integrarmos isso
-            const origem = { lat: -23.5505, lng: -46.6333 };
-            const destino = { lat: -23.5613, lng: -46.6565 };
-
-            const resposta = await fetch('/api/rotas/calcular', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ origem, destino })
-            });
-            const dados = await resposta.json();
-            if (!dados.success) {
-                alert('Erro ao calcular rota de teste');
-                return;
+        function pararRastreamento() {
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                console.log('🛑 Rastreamento parado');
             }
-
-            const pontos = dados.geometria.coordinates; // [[lng, lat], ...]
-            let i = 0;
-            const interval = setInterval(() => {
-                if (i >= pontos.length) { clearInterval(interval); return; }
-                const [lng, lat] = pontos[i];
-                enviarLocalizacao(pedidoAtivoId, lat, lng);
-                i++;
-            }, 2000);
         }
 
+        // ==========================================
+        // NOTIFICAÇÕES
+        // ==========================================
+
+        function showNotification(message, type) {
+            const div = document.createElement('div');
+            div.style.cssText = `
+                position: fixed; bottom: 20px; right: 20px;
+                background: ${type === 'success' ? '#10b981' : '#ef4444'};
+                color: white; padding: 15px 25px; border-radius: 12px;
+                font-weight: 500; z-index: 9999;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+                animation: slideIn 0.3s ease;
+            `;
+            div.innerHTML = message;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 5000);
+        }
+
+        // CSS da animação
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // ==========================================
+        // LOGOUT
+        // ==========================================
+
         function logout() {
+            pararRastreamento();
             localStorage.removeItem('token');
             localStorage.removeItem('usuario');
             window.location.href = '/login';
         }
 
+        // ==========================================
+        // INICIAR
+        // ==========================================
+
         carregarPedidos();
     </script>
 </body>
-
 </html>
