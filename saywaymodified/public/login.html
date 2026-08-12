@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastTrack - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .login-container {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 30px;
+            padding: 50px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+        }
+        .logo { text-align: center; margin-bottom: 40px; }
+        .logo h1 { 
+            color: white; 
+            font-size: 2.5rem; 
+            font-weight: 800; 
+            letter-spacing: -1px;
+        }
+        .logo h1 span { color: #4fc3f7; }
+        .logo p { color: rgba(255,255,255,0.6); margin-top: 5px; }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 5px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: rgba(255,255,255,0.6);
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+        .tab-btn.active {
+            background: #4fc3f7;
+            color: #1a1a2e;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 15px 18px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            border-color: #4fc3f7;
+            background: rgba(255,255,255,0.1);
+        }
+        .form-group input::placeholder { color: rgba(255,255,255,0.3); }
+        .form-group select option { color: #1a1a2e; }
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background: #4fc3f7;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79,195,247,0.3);
+        }
+        .message {
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            text-align: center;
+        }
+        .message.error { background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid #ef4444; }
+        .message.success { background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid #10b981; }
+        .form-toggle {
+            display: none;
+        }
+        .form-toggle.active {
+            display: block;
+        }
+        @media (max-width: 480px) {
+            .login-container { padding: 30px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <h1>Fast<span>Track</span></h1>
+            <p>Seu pedido em tempo real</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('login')">Entrar</button>
+            <button class="tab-btn" onclick="switchTab('cadastro')">Cadastrar</button>
+        </div>
+        
+        <div id="message" class="message"></div>
+        
+        <!-- LOGIN -->
+        <form id="login-form" class="form-toggle active" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <input type="email" id="login-email" placeholder="E-mail" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="login-senha" placeholder="Senha" required>
+            </div>
+            <button type="submit" class="btn-submit">Entrar</button>
+        </form>
+        
+        <!-- CADASTRO -->
+        <form id="cadastro-form" class="form-toggle" onsubmit="handleCadastro(event)">
+            <div class="form-group">
+                <input type="text" id="cadastro-nome" placeholder="Nome completo" required>
+            </div>
+            <div class="form-group">
+                <input type="email" id="cadastro-email" placeholder="E-mail" required>
+            </div>
+            <div class="form-group">
+                <input type="tel" id="cadastro-telefone" placeholder="Telefone">
+            </div>
+            <div class="form-group">
+                <select id="cadastro-tipo" required>
+                    <option value="cliente">Cliente</option>
+                    <option value="empresa">Empresa (Fast Food)</option>
+                    <option value="entregador">Entregador</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <input type="password" id="cadastro-senha" placeholder="Senha" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="cadastro-confirmar" placeholder="Confirmar senha" required>
+            </div>
+            <button type="submit" class="btn-submit">Criar Conta</button>
+        </form>
+    </div>
+
+    <script>
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.form-toggle').forEach(f => f.classList.remove('active'));
+            
+            if (tab === 'login') {
+                document.querySelector('.tab-btn:first-child').classList.add('active');
+                document.getElementById('login-form').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:last-child').classList.add('active');
+                document.getElementById('cadastro-form').classList.add('active');
+            }
+            document.getElementById('message').style.display = 'none';
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const senha = document.getElementById('login-senha').value;
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, senha })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('usuario', JSON.stringify(data.usuario));
+                    showMessage('Login realizado! Redirecionando...', 'success');
+                    
+                    setTimeout(() => {
+                        if (data.usuario.tipo === 'empresa') {
+                            window.location.href = '/empresa/dashboard';
+                        } else if (data.usuario.tipo === 'entregador') {
+                            window.location.href = '/entregador/pedidos';
+                        } else {
+                            window.location.href = '/';
+                        }
+                    }, 1000);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erro ao conectar com o servidor', 'error');
+            }
+        }
+
+        async function handleCadastro(e) {
+            e.preventDefault();
+            const nome = document.getElementById('cadastro-nome').value;
+            const email = document.getElementById('cadastro-email').value;
+            const telefone = document.getElementById('cadastro-telefone').value;
+            const tipo = document.getElementById('cadastro-tipo').value;
+            const senha = document.getElementById('cadastro-senha').value;
+            const confirmar = document.getElementById('cadastro-confirmar').value;
+            
+            if (senha !== confirmar) {
+                showMessage('As senhas não coincidem!', 'error');
+                return;
+            }
+            if (senha.length < 4) {
+                showMessage('A senha deve ter no mínimo 4 caracteres', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/cadastro', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, email, senha, telefone, tipo })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('usuario', JSON.stringify(data.usuario));
+                    showMessage('Cadastro realizado com sucesso!', 'success');
+                    setTimeout(() => {
+                        if (data.usuario.tipo === 'empresa') {
+                            window.location.href = '/empresa/dashboard';
+                        } else if (data.usuario.tipo === 'entregador') {
+                            window.location.href = '/entregador/pedidos';
+                        } else {
+                            window.location.href = '/';
+                        }
+                    }, 1000);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Erro ao cadastrar', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
