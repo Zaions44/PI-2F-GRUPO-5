@@ -1,5 +1,5 @@
 // ==========================================
-// empresa-dashboard.js - VERSÃO CORRIGIDA!
+// empresa-dashboard.js - VERSÃO FINAL COMPLETA
 // ==========================================
 
 const socket = io();
@@ -13,7 +13,6 @@ if (!usuario || usuario.tipo !== 'empresa') {
 }
 
 console.log('✅ Usuário logado:', usuario);
-console.log('✅ Token:', token);
 
 // ===== WEBSOCKET =====
 socket.emit('entrar_sala', `empresa_${usuario.id}`);
@@ -25,7 +24,13 @@ socket.on('novo_pedido', (pedido) => {
 });
 
 // ==========================================
-// FUNÇÕES
+// VARIÁVEL GLOBAL DA EMPRESA
+// ==========================================
+
+let empresaAtual = null;
+
+// ==========================================
+// FUNÇÕES AUXILIARES
 // ==========================================
 
 function showNotification(message, type) {
@@ -55,6 +60,36 @@ function abrirModalProduto() {
 
 function fecharModal() {
     document.getElementById('modal-produto').classList.remove('active');
+}
+
+// ==========================================
+// BUSCAR EMPRESA DO USUÁRIO
+// ==========================================
+
+async function buscarEmpresaDoUsuario() {
+    try {
+        const response = await fetch('/api/empresas');
+        const data = await response.json();
+        
+        if (data.success && data.empresas) {
+            // Procura a empresa que pertence ao usuário logado
+            const empresa = data.empresas.find(e => e.usuario_id === usuario.id);
+            
+            if (empresa) {
+                empresaAtual = empresa;
+                console.log('✅ Empresa encontrada!', empresa);
+                return empresa;
+            } else {
+                console.warn('⚠️ Usuário não tem empresa cadastrada!');
+                showNotification('⚠️ Você precisa cadastrar sua empresa primeiro!', 'error');
+                return null;
+            }
+        }
+        return null;
+    } catch (error) {
+        console.error('❌ Erro ao buscar empresa:', error);
+        return null;
+    }
 }
 
 // ==========================================
@@ -136,17 +171,36 @@ async function atualizarStatus(pedidoId, status) {
 }
 
 // ==========================================
-// CARREGAR PRODUTOS
+// CARREGAR PRODUTOS - CORRIGIDO!
 // ==========================================
 
 async function carregarProdutos() {
     try {
-        const response = await fetch('/api/produtos/empresa/1');
+        // Busca a empresa do usuário
+        const empresa = await buscarEmpresaDoUsuario();
+        
+        if (!empresa) {
+            document.getElementById('produtos-container').innerHTML = `
+                <div class="empty-state">
+                    <i class="fa-regular fa-building"></i>
+                    <h3>Empresa não encontrada</h3>
+                    <p>Entre em contato com o administrador.</p>
+                </div>
+            `;
+            document.getElementById('total-produtos').textContent = '0';
+            return;
+        }
+        
+        const empresaId = empresa.id;
+        console.log('🔍 Buscando produtos da empresa ID:', empresaId);
+        
+        const response = await fetch(`/api/produtos/empresa/${empresaId}`);
         const data = await response.json();
         
         const container = document.getElementById('produtos-container');
         if (!data.success || data.produtos.length === 0) {
             container.innerHTML = `<div class="empty-state"><i class="fa-regular fa-box"></i> Nenhum produto cadastrado</div>`;
+            document.getElementById('total-produtos').textContent = '0';
             return;
         }
         
@@ -162,30 +216,35 @@ async function carregarProdutos() {
             </div>
         `).join('');
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('Erro ao carregar produtos:', error);
     }
 }
 
 // ==========================================
-// ✅ CRIAR PRODUTO - VERSÃO CORRIGIDA!
+// CRIAR PRODUTO - CORRIGIDO!
 // ==========================================
 
 async function criarProduto(dados) {
-    const tokenSalvo = localStorage.getItem('token');
+    // Busca a empresa do usuário
+    const empresa = await buscarEmpresaDoUsuario();
     
-    // ✅ USA SEMPRE O ID 1 (OU O ID QUE VOCÊ CRIOU)
-    const empresaId = 1;  // ← MUDE AQUI SE PRECISAR
+    if (!empresa) {
+        throw new Error('Empresa não encontrada para este usuário');
+    }
     
-    console.log('📦 Enviando com empresa_id:', empresaId);
+    const empresaId = empresa.id;
+    
+    console.log('📦 Criando produto para empresa ID:', empresaId);
+    console.log('📦 Dados:', dados);
     
     const response = await fetch('/api/produtos', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${tokenSalvo}`
+            'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-            empresa_id: empresaId,  // ← SEMPRE 1!
+            empresa_id: empresaId,
             nome: dados.nome,
             descricao: dados.descricao || '',
             preco: dados.preco,
@@ -201,6 +260,7 @@ async function criarProduto(dados) {
     }
     return data;
 }
+
 // ==========================================
 // FORMULÁRIO - EVENTO DE SUBMIT
 // ==========================================
@@ -208,7 +268,6 @@ async function criarProduto(dados) {
 document.getElementById('form-produto').addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // Pegar dados do formulário
     const dados = {
         nome: document.getElementById('produto-nome').value.trim(),
         descricao: document.getElementById('produto-desc').value.trim() || '',
@@ -218,7 +277,6 @@ document.getElementById('form-produto').addEventListener('submit', async (e) => 
     
     console.log('📝 Dados do formulário:', dados);
     
-    // Validar
     if (!dados.nome || dados.nome.length < 2) {
         showNotification('❌ Nome deve ter pelo menos 2 caracteres', 'error');
         return;
@@ -228,7 +286,6 @@ document.getElementById('form-produto').addEventListener('submit', async (e) => 
         return;
     }
     
-    // Mostrar loading
     const btn = e.target.querySelector('button[type="submit"]');
     const textoOriginal = btn.innerHTML;
     btn.innerHTML = '⏳ Salvando...';
@@ -251,12 +308,27 @@ document.getElementById('form-produto').addEventListener('submit', async (e) => 
 });
 
 // ==========================================
+// CSS DA ANIMAÇÃO
+// ==========================================
+
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+`;
+document.head.appendChild(style);
+
+// ==========================================
 // INICIAR
 // ==========================================
 
-carregarPedidos();
-carregarProdutos();
+// Primeiro, busca a empresa
+buscarEmpresaDoUsuario().then(() => {
+    carregarPedidos();
+    carregarProdutos();
+});
 
 console.log('✅ Dashboard da empresa carregado!');
 console.log('👤 Usuário:', usuario);
-console.log('🆔 ID do usuário:', usuario.id);

@@ -34,26 +34,60 @@ function autenticar(req, res, next) {
 // ========== ROTAS DE AUTENTICAÇÃO ==========
 
 // ========== ROTAS DE AUTENTICAÇÃO ==========
-app.post('/api/auth/cadastro', async (req, res) => {
-    const { nome, email, senha, telefone, tipo } = req.body;
+app.post('/api/auth/login', async (req, res) => {
+    const { email, senha } = req.body;
+    console.log('📝 Tentativa de login:', email);
+    
     try {
-        const existe = await pool.query('SELECT id FROM usuarios WHERE email = $1', [email]);
-        if (existe.rows.length > 0) {
-            return res.status(400).json({ success: false, message: "Email já cadastrado" });
+        const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+        
+        if (result.rows.length === 0) {
+            console.log('❌ Usuário não encontrado:', email);
+            return res.status(401).json({ success: false, message: "Email ou senha incorretos" });
         }
-
-        const senhaHash = await bcrypt.hash(senha, 10);
-        const result = await pool.query(
-            'INSERT INTO usuarios (nome, email, senha, telefone, tipo) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome, email, tipo',
-            [nome, email, senhaHash, telefone, tipo || 'cliente']
-        );
-
+        
         const usuario = result.rows[0];
-        const token = jwt.sign({ id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo }, JWT_SECRET, { expiresIn: '7d' });
-
-        res.json({ success: true, token, usuario });
+        console.log('👤 Usuário encontrado:', usuario.nome);
+        console.log('🔑 Senha no banco:', usuario.senha);
+        console.log('🔑 Senha digitada:', senha);
+        
+        let senhaValida = false;
+        
+        // ⚠️ VERIFICA SE A SENHA É HASH OU TEXTO PURO
+        if (usuario.senha && usuario.senha.startsWith('$2b$')) {
+            // É um hash do bcrypt
+            console.log('🔐 Senha é hash, usando bcrypt...');
+            senhaValida = await bcrypt.compare(senha, usuario.senha);
+        } else {
+            // É texto puro
+            console.log('📝 Senha é texto puro, comparando diretamente...');
+            senhaValida = (senha === usuario.senha);
+        }
+        
+        console.log('✅ Senha válida?', senhaValida);
+        
+        if (senhaValida) {
+            await pool.query('UPDATE usuarios SET ultimo_login = NOW() WHERE id = $1', [usuario.id]);
+            
+            const token = jwt.sign(
+                { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo },
+                JWT_SECRET,
+                { expiresIn: '7d' }
+            );
+            
+            console.log('✅ Login sucesso:', usuario.nome);
+            res.json({ 
+                success: true, 
+                token,
+                usuario: { id: usuario.id, nome: usuario.nome, email: usuario.email, tipo: usuario.tipo }
+            });
+        } else {
+            console.log('❌ Senha incorreta para:', email);
+            res.status(401).json({ success: false, message: "Email ou senha incorretos" });
+        }
+        
     } catch (error) {
-        console.error(error);
+        console.error('❌ Erro no login:', error);
         res.status(500).json({ success: false, message: "Erro interno" });
     }
 });
@@ -205,6 +239,43 @@ app.put('/api/pedidos/:id/status', autenticar, async (req, res) => {
     }
 });
 
+// ========== ROTA DE PEDIDOS DA EMPRESA ==========
+app.get('/api/pedidos/empresa', autenticar, async (req, res) => {
+    // Verifica se é uma empresa
+    if (req.usuario.tipo !== 'empresa') {
+        return res.status(403).json({ success: false, message: "Apenas empresas" });
+    }
+
+    try {
+        // Busca a empresa do usuário logado
+        const empresa = await pool.query(
+            'SELECT id FROM empresas WHERE usuario_id = $1',
+            [req.usuario.id]
+        );
+
+        if (empresa.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "Empresa não encontrada" });
+        }
+
+        const empresaId = empresa.rows[0].id;
+
+        // Busca os pedidos da empresa
+        const result = await pool.query(
+            `SELECT p.*, u.nome as cliente_nome 
+             FROM pedidos p
+             JOIN usuarios u ON p.cliente_id = u.id
+             WHERE p.empresa_id = $1
+             ORDER BY p.data_pedido DESC`,
+            [empresaId]
+        );
+
+        res.json({ success: true, pedidos: result.rows });
+    } catch (error) {
+        console.error('Erro ao buscar pedidos da empresa:', error);
+        res.status(500).json({ success: false, message: "Erro ao buscar pedidos" });
+    }
+});
+
 // ========== ROTAS DE ENTREGADOR ==========
 app.get('/api/pedidos/entregador/disponiveis', async (req, res) => {
     try {
@@ -248,14 +319,7 @@ io.on('connection', (socket) => {
 
 // ========== ROTA DE CADASTRO ==========
 
-app.post('/api/auth/cadastro', (req, res) => {
-    // Aqui você vai processar o cadastro
-    // Exemplo: pegar dados do corpo
-    const { nome, email, senha, tipo } = req.body;
-    // validar, salvar no banco etc
-    // Por enquanto, retorne uma resposta de sucesso
-    res.status(201).json({ mensagem: 'Usuário cadastrado com sucesso!' });
-});
+
 
 // ========== INICIAR ==========
 const PORT = process.env.PORT || 3000;

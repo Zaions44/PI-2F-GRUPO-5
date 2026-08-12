@@ -124,6 +124,7 @@ function toggleCart() {
 }
 
 // ========== FINALIZAR PEDIDO ==========
+// ========== FINALIZAR PEDIDO (CORRIGIDO) ==========
 async function finalizarPedido() {
     if (cart.length === 0) {
         alert('🛒 Seu carrinho está vazio!');
@@ -137,6 +138,21 @@ async function finalizarPedido() {
 
     try {
         const token = localStorage.getItem('token');
+        const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+        
+        if (!usuario) {
+            alert('❌ Faça login para fazer um pedido!');
+            window.location.href = '/login';
+            return;
+        }
+
+        // ✅ PEGA O EMPRESA_ID DO PRIMEIRO ITEM DO CARRINHO
+        // OU PERGUNTA AO USUÁRIO QUAL RESTAURANTE
+        const empresaId = cart.length > 0 ? cart[0].empresa_id : 1;
+        
+        console.log('📦 Finalizando pedido para empresa:', empresaId);
+        console.log('📦 Itens:', cart);
+
         const response = await fetch('/api/pedidos', {
             method: 'POST',
             headers: {
@@ -144,7 +160,7 @@ async function finalizarPedido() {
                 'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                empresa_id: 1,
+                empresa_id: empresaId,  // ✅ DINÂMICO!
                 items: cart.map(item => ({
                     produto_id: item.id,
                     preco: item.preco,
@@ -163,7 +179,7 @@ async function finalizarPedido() {
             updateCartUI();
             toggleCart();
         } else {
-            alert('❌ Erro ao finalizar pedido');
+            alert('❌ Erro ao finalizar pedido: ' + (data.message || ''));
         }
     } catch (error) {
         alert('❌ Erro ao conectar com o servidor');
